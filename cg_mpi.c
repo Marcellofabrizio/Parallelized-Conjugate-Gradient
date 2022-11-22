@@ -5,17 +5,23 @@
 #include <string.h>
 #include <mpi.h>
 
+#define ITERMAX 100
+#define ERROR 0.00000001
+
+
 void createPosDefMatrix(int n, double *matA, double *arrX, double *arrB); 
-void scaleArray(int n, double scalar, double *arr, double *result); 
-void dotProd(int n, double *arrA, double *arrB);
+double scaleArray(int n, double scalar, double *arr, double *result); 
+double dotProd(int n, double *arrA, double *arrB);
 void addArrays(int n, double *arrA, double *arrB, double *result);
 void subArrays(int n, double *arrA, double *arrB, double *result);
 void arrayMultiplication(int n, double *arrA, double *arrB, double *result);
 
 int main(int argc, char **argv) {
 
-  int id, np, N, i, j;
-  double *matA, *arrX, *arrB, *arrAux, *arrOpp, *arrR, *arrD, *arrQ, *arrProd, *arrResCG;
+  int id, np, N;
+  int iter = 0;
+  double *matA, *arrX, *arrB, *arrAux, *arrOpp, *arrR, *arrD, *arrQ, *arrProd, *arrResCG,
+         sigma, oldSigma, newSigma, initialSigma, alpha, beta, start, end;
   
   if(argc != 2) {
 		printf("usage: %s <matrix_order>\n", argv[0]);
@@ -24,6 +30,11 @@ int main(int argc, char **argv) {
 
   N = atoi(argv[1]);
 
+  MPI_Status s;
+  MPI_Init(&argc, &argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &id);
+  MPI_Comm_size(MPI_COMM_WORLD, &np);
+  
   matA     = (double *) malloc(N*N*sizeof(double));
   arrX     = (double *) malloc(N*sizeof(double));
   arrB     = (double *) malloc(N*sizeof(double));
@@ -35,11 +46,6 @@ int main(int argc, char **argv) {
   arrProd  = (double *) malloc(N*sizeof(double));  
   arrResCG = (double *) malloc(N*sizeof(double));  
 
-  MPI_Status s;
-  MPI_Init(&argc, &argv);
-  MPI_Comm_rank(MPI_COMM_WORLD, &id);
-  MPI_Comm_size(MPI_COMM_WORLD, &np);
-
   createPosDefMatrix(N, matA, arrX, arrB);
 
   MPI_Bcast(arrX, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -48,20 +54,59 @@ int main(int argc, char **argv) {
 
   /* ------------------------- MATRIX MULTIPLICATION ------------------------- */
 
-  for(i = 0; i < N/np; i++) {
+  for(int i = 0; i < N/np; i++) {
     arrProd[i] = 0;
-    for(j = 0; j < N; j++) {
-      printf("%lf\n",  arrX[j]);
-      arrProd[i] = arrOpp[i*N+j] * arrX[j];
+    for(int j = 0; j < N; j++) {
+      arrProd[i] += arrOpp[i*N+j] * arrX[j];
     }
   }
 
-  MPI_Gather(arrProd, N/np, MPI_DOUBLE, arrAux, N/np, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  MPI_Allgather(arrProd, N/np, MPI_DOUBLE, arrAux, N/np, MPI_DOUBLE, MPI_COMM_WORLD);
+
+  subArrays(N, arrB, arrAux, arrR);
+  memcpy(arrD, arrR, N*sizeof(double));
+
+  newSigma = dotProd(N, arrR, arrR);
+  sigma = newSigma;
+
+  while(iter < ITERMAX && sigma > ERROR) {
+  
+    MPI_Scatter(matA, N/N*np, MPI_DOUBLE, arrOpp, N/N*np, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    for(int i = 0; i < N/np; i++) {
+      arrProd[i] = 0;
+      for(int j = 0; j < N; j++) {
+        arrProd[i] += arrOpp[i*N+j] * arrD[j];
+      }
+    }
+
+    MPI_Allgather(arrProd, N/np, MPI_DOUBLE, arrQ, N/np, MPI_DOUBLE, MPI_COMM_WORLD);
+
+    if(id == 0)
+      for(int i = 0; i < N; i++) {
+        printf("%f\n", arrQ[i]);
+      }
+
+    alpha = newSigma/dotProd(N, arrD, arrQ);
+    scaleArray(N, alpha, arrD, arrAux);
+    addArrays(N, arrX, arrAux, arrX);
+    scaleArray(N, alpha, arrQ, arrAux);
+    subArrays(N, arrR, arrAux, arrR);
+
+    oldSigma = newSigma;
+    newSigma = dotProd(N, arrR, arrR);
+
+    beta = newSigma/oldSigma;
+    scaleArray(N, beta, arrD, arrAux);
+    addArrays(N, arrR, arrAux, arrD);
+
+    iter++;
+  }
 
   if(id == 0) {
-    for(i = 0; i < N; i++) {
-      printf("final[%d] = %lf\n", i, arrAux[i]);
-    }
+
+    printf("Numero de Iterações: %d\n", iter);
+
   }
 
   MPI_Finalize();
@@ -86,7 +131,7 @@ void createPosDefMatrix(int n, double *matA, double *arrX, double *arrB) {
 
 }
 
-void scaleArray(int n, double scalar, double *arr, double *result) {
+double scaleArray(int n, double scalar, double *arr, double *result) {
 
   int i;
 
@@ -96,7 +141,7 @@ void scaleArray(int n, double scalar, double *arr, double *result) {
 
 }
 
-void dotProd(int n, double *arrA, double *arrB) {
+double dotProd(int n, double *arrA, double *arrB) {
 
   int i;
   double prod = 0;
