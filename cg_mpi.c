@@ -76,12 +76,7 @@ int main(int argc, char **argv)
   {
 
     MPI_Scatter(matA, N / np * N, MPI_DOUBLE, arrOpp, N / np * N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-    if (iter < 2 && id == 0)
-    {
-      for (int i = 0; i < N / np; i++)
-        printf("[%d] Array Opp: %.2f\n", id, arrOpp[i]);
-    }
+    MPI_Barrier(MPI_COMM_WORLD);
 
     for (int i = 0; i < N / np; i++)
     {
@@ -96,6 +91,13 @@ int main(int argc, char **argv)
 
     // MPI_Bcast(arrQ, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Allgather(arrProd, N / np, MPI_DOUBLE, arrQ, N / np, MPI_DOUBLE, MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    if (id == 0)
+    {
+      for (int i = 0; i < N; i++)
+        printf("[%d] Array Q: %.2f\n", id, arrQ[i]);
+    }
 
     alpha = newSigma / dotProd(N, arrD, arrQ);
 
