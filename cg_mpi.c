@@ -43,14 +43,16 @@ int main(int argc, char **argv)
   arrR = (double *)malloc(N * sizeof(double));
   arrD = (double *)malloc(N * sizeof(double));
   arrQ = (double *)malloc(N * sizeof(double));
-  arrOpp = (double *)malloc(N * sizeof(double));
+  arrOpp = (double *)malloc(N/np*N * sizeof(double));
   arrProd = (double *)malloc(N * sizeof(double));
   arrResCG = (double *)malloc(N * sizeof(double));
 
   createPosDefMatrix(N, matA, arrX, arrB);
 
-  MPI_Bcast(arrX, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  for(int i = 0; i < N; i++)
+    printf("[%d] arrB: %f\n", id, arrB[i]);
 
+  //MPI_Bcast(arrX, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
   MPI_Scatter(matA, N / np * N, MPI_DOUBLE, arrOpp, N / np * N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
   /* ------------------------- MATRIX MULTIPLICATION ------------------------- */
@@ -64,7 +66,13 @@ int main(int argc, char **argv)
     }
   }
 
+  for (int i = 0; i < N/np; i++)
+    printf("[%d] Array Result Antes do Laço: %.2f\n", id, arrProd[i]);
+
   MPI_Allgather(arrProd, N / np, MPI_DOUBLE, arrAux, N / np, MPI_DOUBLE, MPI_COMM_WORLD);
+  
+  for (int i = 0; i < N; i++)
+    printf("[%d] Array Aux: %.2f\n", id, arrAux[i]);
 
   subArrays(N, arrB, arrAux, arrR);
   memcpy(arrD, arrR, N * sizeof(double));
@@ -72,11 +80,16 @@ int main(int argc, char **argv)
   newSigma = dotProd(N, arrR, arrR);
   sigma = newSigma;
 
-  while (iter < ITERMAX && newSigma > ERROR)
+  printf("Antes do laço\n");
+  printf("[%d] Iter: %d\n", id, iter);
+  printf("[%d] New Sigma: %f\n", id, newSigma);
+  while ((iter < ITERMAX) && (newSigma > ERROR))
   {
 
-    MPI_Scatter(matA, N / np * N, MPI_DOUBLE, arrOpp, N / np * N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD);
+    //MPI_Scatter(matA, N / np * N, MPI_DOUBLE, arrOpp, N / np * N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    if(id == 0)
+    printf("Depois do scatter interno\n");
 
     for (int i = 0; i < N / np; i++)
     {
@@ -86,12 +99,11 @@ int main(int argc, char **argv)
         arrProd[i] += arrOpp[i * N + j] * arrD[j];
       }
     }
+    
+    for (int i = 0; i < N; i++)
+        printf("[%d] Array Prod: %.2f\n", id, arrProd[i]);
 
-    // MPI_Gather(arrProd, N / np, MPI_DOUBLE, arrQ, N / np, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-    // MPI_Bcast(arrQ, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Allgather(arrProd, N / np, MPI_DOUBLE, arrQ, N / np, MPI_DOUBLE, MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD);
 
     if (id == 0)
     {
@@ -100,6 +112,8 @@ int main(int argc, char **argv)
     }
 
     alpha = newSigma / dotProd(N, arrD, arrQ);
+
+    printf("[%d] Alpha: %.2f\n", id, alpha);
 
     scaleArray(N, alpha, arrD, arrAux);
     addArrays(N, arrX, arrAux, arrX);
@@ -113,6 +127,7 @@ int main(int argc, char **argv)
     scaleArray(N, beta, arrD, arrAux);
     addArrays(N, arrR, arrAux, arrD);
 
+    MPI_Barrier(MPI_COMM_WORLD);
     iter++;
   }
 
