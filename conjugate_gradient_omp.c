@@ -35,8 +35,6 @@ int main(int argc, char **argv)
   N = atoi(argv[1]);
   nThreads = atoi(argv[2]);
 
-  printf("Número de threads: %d\n", nThreads);
-
   start = getTime();
 
   matA = (double *)malloc(N * N * sizeof(double));
@@ -50,9 +48,7 @@ int main(int argc, char **argv)
 
   createPosDefMatrix(N, matA, arrX, arrB);
 
-  matrixByArray(N, nThreads, matA, arrX, arrProd);
-
-  printf("Depois da primeira multiplicacao_matriz_vetor\n");
+  matrixByArray(N, nThreads, matA, arrX, arrAux);
 
   subArrays(N, arrB, arrAux, arrR);
   memcpy(arrD, arrR, N * sizeof(double));
@@ -63,7 +59,7 @@ int main(int argc, char **argv)
   while ((iter < ITERMAX) && (newSigma > ERROR))
   {
 
-    matrixByArray(N, nThreads, matA, arrD, arrProd);
+    matrixByArray(N, nThreads, matA, arrD, arrQ);
 
     alpha = newSigma / dotProd(N, arrD, arrQ);
 
@@ -94,16 +90,13 @@ void matrixByArray(int n, int numThreads, double *mat, double *arr, double *resu
 
   omp_set_num_threads(numThreads);
 
-#pragma omp parallel private(i, j, id)
+#pragma omp parallel for private(i,j)
+  for (i = 0; i < n; i++)
   {
-    id = omp_get_thread_num();
-    for (i = id; i < n; i += numThreads)
+    result[i] = 0;
+    for (j = 0; j < n; j++)
     {
-      result[i] = 0;
-      for (j = 0; j < n; j++)
-      {
-        result[i] += mat[i * n + j] * arr[j];
-      }
+      result[i] += mat[i * n + j] * arr[j];
     }
   }
 }

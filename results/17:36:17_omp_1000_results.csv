@@ -1,0 +1,25 @@
+Número de threads,Tempo,Resultado
+Número de threads: 1
+Depois da primeira multiplicacao_matriz_vetor
+1,0.006954,1
+Número de threads: 2
+Depois da primeira multiplicacao_matriz_vetor
+2,0.006100,1
+Número de threads: 4
+Depois da primeira multiplicacao_matriz_vetor
+4,0.003685,1
+Número de threads: 5
+Depois da primeira multiplicacao_matriz_vetor
+5,0.002825,1
+Número de threads: 8
+Depois da primeira multiplicacao_matriz_vetor
+8,0.002996,1
+Número de threads: 10
+Depois da primeira multiplicacao_matriz_vetor
+10,0.002615,1
+Número de threads: 20
+Depois da primeira multiplicacao_matriz_vetor
+20,0.003308,1
+Número de threads: 25
+Depois da primeira multiplicacao_matriz_vetor
+25,0.003799,1
