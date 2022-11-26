@@ -8,11 +8,12 @@
 #define ITERMAX 100
 #define ERROR 0.00000001
 
-void createPosDefMatrix(int n, double *matA, double *arrX, double *arrB);
 double scaleArray(int n, double scalar, double *arr, double *result);
 double dotProd(int n, double *arrA, double *arrB);
 void addArrays(int n, double *arrA, double *arrB, double *result);
 void subArrays(int n, double *arrA, double *arrB, double *result);
+void matrixByArray(int n, int numProcs, double *mat, double *arr, double *result);
+void createPosDefMatrix(int n, double *matA, double *arrX, double *arrB);
 void arrayMultiplication(int n, double *arrA, double *arrB, double *result);
 
 int main(int argc, char **argv)
@@ -55,14 +56,7 @@ int main(int argc, char **argv)
 
   /* ------------------------- MATRIX MULTIPLICATION ------------------------- */
 
-  for (int i = 0; i < N / np; i++)
-  {
-    arrProd[i] = 0;
-    for (int j = 0; j < N; j++)
-    {
-      arrProd[i] += arrOpp[i * N + j] * arrX[j];
-    }
-  }
+  matrixByArray(N, np, arrOpp, arrX, arrProd);
 
   MPI_Allgather(arrProd, N / np, MPI_DOUBLE, arrAux, N / np, MPI_DOUBLE, MPI_COMM_WORLD);
 
@@ -75,14 +69,7 @@ int main(int argc, char **argv)
   while ((iter < ITERMAX) && (newSigma > ERROR))
   {
 
-    for (int i = 0; i < N / np; i++)
-    {
-      arrProd[i] = 0;
-      for (int j = 0; j < N; j++)
-      {
-        arrProd[i] += arrOpp[i * N + j] * arrD[j];
-      }
-    }
+    matrixByArray(N, np, arrOpp, arrD, arrProd);
 
     MPI_Allgather(arrProd, N / np, MPI_DOUBLE, arrQ, N / np, MPI_DOUBLE, MPI_COMM_WORLD);
 
@@ -113,6 +100,18 @@ int main(int argc, char **argv)
   }
 
   MPI_Finalize();
+}
+
+void matrixByArray(int n, int numProcs, double *mat, double *arr, double *result)
+{
+  for (int i = 0; i < n / numProcs; i++)
+  {
+    result[i] = 0;
+    for (int j = 0; j < n; j++)
+    {
+      result[i] += mat[i * n + j] * arr[j];
+    }
+  }
 }
 
 void createPosDefMatrix(int n, double *matA, double *arrX, double *arrB)
