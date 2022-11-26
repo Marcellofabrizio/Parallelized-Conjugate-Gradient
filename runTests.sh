@@ -59,9 +59,10 @@ CreateResultFile() {
     timeStamp=$(date '+%T')
     RESULTS_FILE="./"$timeStamp"_"$ORDER_MATRIX"_results.csv"
 
+    touch $RESULTS_FILE
+    
     echo "Número de processos,Tempo,Resultado" > $RESULTS_FILE
 
-    touch $RESULTS_FILE
 }
 
 ExecuteTests() {
