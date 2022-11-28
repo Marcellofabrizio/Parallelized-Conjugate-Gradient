@@ -15,6 +15,8 @@ OMP_RESULTS_FILE=""
 
 ORDER_MATRIX=""
 
+TIMESTAMP=$(date '+%T')
+
 Help() {
 
     cat << EOM
@@ -31,11 +33,56 @@ EOM
 
 ParseArgs() {
 
-    ORDER_MATRIX=$1
+    runBoth=false
+    runMpi=false
+    runOmp=false
+
+    while getopts ":b:p:t" flag; do
+        case ${flag} in
+        b)
+            runBoth=true
+            ;;
+        p)
+            runMpi=true
+            ;;
+        t)
+            runOmp=true
+            ;;
+        \?) # incorrect option
+            Help
+            ;;
+        *) # incorrect option
+            Help
+            ;;
+        esac
+    done
+
+    echo $2
+    ORDER_MATRIX=$2
 
     if [ -z "$ORDER_MATRIX" ]; then
         Help
     fi
+
+    CreateResultFile
+
+    if $runBoth; then
+        CreateMpiResultFile
+        CreateOmpResultFile
+        ExecuteMpiTests
+        ExecuteOmpTests
+    fi
+
+    if $runMpi; then
+        CreateMpiResultFile
+        ExecuteMpiTests
+    fi
+
+    if $runOmp; then
+        CreateOmpResultFile
+        ExecuteOmpTests
+    fi
+
 }
 
 CompileBinaries() {
@@ -72,16 +119,22 @@ CompileBinaries() {
 
 }
 
-CreateResultFile() {
+CreateMpiResultFile() {
     
-    timeStamp=$(date '+%T')
-    RESULTS_FILE="./"$timeStamp"_"$ORDER_MATRIX"_results.csv"
-    OMP_RESULTS_FILE="./"$timeStamp"_omp_"$ORDER_MATRIX"_results.csv"
+    RESULTS_FILE="./results/"$TIMESTAMP"_mpi_"$ORDER_MATRIX"_results.csv"
 
     touch $RESULTS_FILE
-    touch $OMP_RESULTS_FILE
 
     echo "Número de processos,Tempo,Resultado" > $RESULTS_FILE
+
+}
+
+CreateOmpResultFile() {
+    
+    OMP_RESULTS_FILE="./results/"$TIMESTAMP"_omp_"$ORDER_MATRIX"_results.csv"
+
+    touch $OMP_RESULTS_FILE
+
     echo "Número de threads,Tempo,Resultado" > $OMP_RESULTS_FILE
 
 }
@@ -122,8 +175,5 @@ ExecuteOmpTests() {
 
 }
 
-ParseArgs "$@"
 CompileBinaries
-CreateResultFile
-# ExecuteMpiTests
-ExecuteOmpTests
+ParseArgs "$@"
