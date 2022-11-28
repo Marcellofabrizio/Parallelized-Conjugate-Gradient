@@ -17,6 +17,8 @@ ORDER_MATRIX=""
 
 TIMESTAMP=$(date '+%T')
 
+TEST_RANGE=30
+
 Help() {
 
     cat << EOM
@@ -63,8 +65,6 @@ ParseArgs() {
     if [ -z "$ORDER_MATRIX" ]; then
         Help
     fi
-
-    CreateResultFile
 
     if $runBoth; then
         CreateMpiResultFile
@@ -141,7 +141,7 @@ CreateOmpResultFile() {
 
 ExecuteMpiTests() {
 
-    for i in {1..30}
+    for i in {1..$TEST_RANGE}
     do
     if [ $(expr $ORDER_MATRIX % $i) -eq 0 ]; then
         echo "Executing test with $i processes..."
@@ -159,7 +159,7 @@ ExecuteMpiTests() {
 
 ExecuteOmpTests() {
 
-    for i in {1..30}
+    for i in {1..$TEST_RANGE}
     do
     if [ $(expr $ORDER_MATRIX % $i) -eq 0 ]; then
         echo "Executing test with $i threads..."
