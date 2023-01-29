@@ -87,9 +87,15 @@ int main(int argc, char **argv)
     scaleArray(N, beta, arrD, arrAux);
     addArrays(N, arrR, arrAux, arrD);
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    // MPI_Barrier(MPI_COMM_WORLD);
     iter++;
   }
+
+  if (id == 0)
+    for (int i = 0; i < N; i++)
+    {
+      printf("Vetor: %f\n", arrX[i]);
+    }
 
   end = MPI_Wtime();
 
@@ -118,7 +124,7 @@ void createPosDefMatrix(int n, double *matA, double *arrX, double *arrB)
 {
   int i;
 
-  memset(matA, 0, n * sizeof(double));
+  memset(matA, 0, n * n * sizeof(double));
 
   for (i = 0; i < n; i++)
   {

@@ -16,7 +16,6 @@ void addArrays(int n, double *arrA, double *arrB, double *result);
 void subArrays(int n, double *arrA, double *arrB, double *result);
 void matrixByArray(int n, int numThreads, double *mat, double *arr, double *result);
 void createPosDefMatrix(int n, double *matA, double *arrX, double *arrB);
-void arrayMultiplication(int n, double *arrA, double *arrB, double *result);
 
 int main(int argc, char **argv)
 {
@@ -90,7 +89,7 @@ void matrixByArray(int n, int numThreads, double *mat, double *arr, double *resu
 
   omp_set_num_threads(numThreads);
 
-#pragma omp parallel for private(i,j)
+#pragma omp parallel for private(j)
   for (i = 0; i < n; i++)
   {
     result[i] = 0;
@@ -105,14 +104,14 @@ void createPosDefMatrix(int n, double *matA, double *arrX, double *arrB)
 {
   int i;
 
-  memset(matA, 0, n * sizeof(double));
+  memset(matA, 0, n * n * sizeof(double));
 
   for (i = 0; i < n; i++)
-  {
     arrB[i] = 1;
+  for (i = 0; i < n; i++)
     arrX[i] = 0;
+  for (i = 0; i < n; i++)
     matA[i * n + i] = 4;
-  }
 
   for (i = 0; i < n - 1; i++)
   {
